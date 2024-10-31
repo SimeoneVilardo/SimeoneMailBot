@@ -8,7 +8,7 @@ from email.policy import default
 from aiosmtpd.controller import Controller
 from io import BytesIO
 from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
+from telegram.ext import ApplicationBuilder
 
 # Initialize the Telegram bot with your bot token
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -17,6 +17,7 @@ SMTP_SERVER = os.environ.get("SMTP_SERVER")
 SMTP_PORT = int(os.environ.get("SMTP_PORT"))
 SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+DOMAINS = os.environ.get("DOMAINS", []).split(",")
 
 def send_mail(sender, recipient, subject, body_text):
     message = MIMEMultipart('alternative')
@@ -43,9 +44,11 @@ class MessageHandlerSMTP:
         self.bot = bot
 
     async def handle_DATA(self, server, session, envelope):
-        mail = BytesParser(policy=default).parsebytes(envelope.content)
-        mail_from = envelope.mail_from
         rcpt_tos = envelope.rcpt_tos
+        if all(not s.endswith(d) for s in rcpt_tos for d in DOMAINS):
+            return "550 5.7.1 Access denied, message rejected"
+        mail_from = envelope.mail_from
+        mail = BytesParser(policy=default).parsebytes(envelope.content)
         subject = mail["subject"] if mail["subject"] else "(No Subject)"
 
         basic_info = (
@@ -73,18 +76,6 @@ class MessageHandlerSMTP:
         return "250 Message accepted for delivery"
 
 
-# Function to respond with "pong" when receiving "ping"
-async def ping_command(update, context):
-    await update.message.reply_text("pong")
-
-
-# Generic message handler to detect the word "ping" in any text message
-async def text_message(update, context):
-    if "ping" in update.message.text.lower():
-        send_mail("amazon@simeonevilardo.com", "simeone.vilardo@gmail.com", "Ping", "Pong")
-        await update.message.reply_text("pong")
-
-
 async def main():
     # Create the Telegram bot instance
     application = ApplicationBuilder().token(TOKEN).build()
@@ -98,10 +89,6 @@ async def main():
     handler_smtp = MessageHandlerSMTP(bot)
     controller = Controller(handler_smtp, hostname="0.0.0.0", port=1025)
 
-    # Set up Telegram command handlers
-    application.add_handler(CommandHandler("ping", ping_command))
-    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), text_message))
-
     # Start the Telegram bot in the background
     controller.start()
     print("SMTP Server started on port 1025...")
@@ -109,7 +96,7 @@ async def main():
 
     try:
         application.run_polling()
-    except:
+    except Exception as e:
         controller.stop()
         print("SMTP Server stopped.")
         print("Telegram Bot stopped.")
