@@ -31,3 +31,19 @@ jobs:
         push: true
         tags: simeonevilardo/simeone-mail-bot:latest
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Docker compose up
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.HOST_NAME }}
+          username: ${{ secrets.HOST_USERNAME }}
+          key: ${{ secrets.HOST_KEY }}
+          port: ${{ secrets.HOST_PORT }}
+          script: docker-compose -f /home/${{ secrets.HOST_USERNAME }}/simeone-mail-bot/docker-compose.yml up
+      
+      
+    
