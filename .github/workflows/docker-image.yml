@@ -43,7 +43,7 @@ jobs:
           username: ${{ secrets.HOST_USERNAME }}
           key: ${{ secrets.HOST_KEY }}
           port: ${{ secrets.HOST_PORT }}
-          script: docker compose -f /home/${{ secrets.HOST_USERNAME }}/simeone-mail-bot/docker-compose.yml up -d
+          script: docker compose -f /home/${{ secrets.HOST_USERNAME }}/simeone-mail-bot/docker-compose.yml up -d --force-recreate
       
       
     
