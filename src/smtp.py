@@ -1,16 +1,14 @@
 import asyncio
 import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from email.parser import BytesParser
 from email.policy import default
-from aiosmtpd.controller import Controller
 from io import BytesIO
-from telegram.constants import ParseMode
-from telegram.ext import ApplicationBuilder
 
-# Initialize the Telegram bot with your bot token
+from aiosmtpd.controller import Controller
+from telegram import Update
+from telegram.constants import ParseMode
+from telegram.ext import ContextTypes, Application, CommandHandler
+
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 SMTP_SERVER = os.environ.get("SMTP_SERVER")
@@ -19,25 +17,6 @@ SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
 DOMAINS = os.environ.get("DOMAINS", []).split(",")
 
-def send_mail(sender, recipient, subject, body_text):
-    message = MIMEMultipart('alternative')
-    message['Subject'] = subject
-    message['From'] = sender
-    message['To'] = recipient
-    message.attach(MIMEText(body_text, 'plain'))
-
-    try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.ehlo()
-        server.starttls()  # Secure the connection
-        server.ehlo()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.sendmail(sender, recipient, message.as_string())
-        print("Email sent successfully!")
-    except Exception as e:
-        print(f"Error sending email: {e}")
-    finally:
-        server.quit()
 
 class MessageHandlerSMTP:
     def __init__(self, bot):
@@ -63,43 +42,25 @@ class MessageHandlerSMTP:
         email_content_io.write(email_body.encode("utf-8"))
         email_content_io.seek(0)
 
-        # Send basic email info to Telegram chat
-        await self.bot.send_message(
-            chat_id=CHAT_ID, text=basic_info, parse_mode=ParseMode.HTML
-        )
-
-        # Send the email body as a file
-        await self.bot.send_document(
-            chat_id=CHAT_ID, document=email_content_io, filename="email_content.html"
-        )
+        await self.bot.send_message(chat_id=CHAT_ID, text=basic_info, parse_mode=ParseMode.MARKDOWN)
+        await self.bot.send_document(chat_id=CHAT_ID, document=email_content_io, filename="content.html")
 
         return "250 Message accepted for delivery"
 
 
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("Hello! I am a bot that will forward emails to this chat.")
+
+
 async def main():
-    # Create the Telegram bot instance
-    application = ApplicationBuilder().token(TOKEN).build()
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
 
-    # Initialize the Telegram bot application
-    await application.initialize()
-
-    bot = application.bot
-
-    # Instantiate the handler for the SMTP server
-    handler_smtp = MessageHandlerSMTP(bot)
+    handler_smtp = MessageHandlerSMTP(app.bot)
     controller = Controller(handler_smtp, hostname="0.0.0.0", port=1025)
 
-    # Start the Telegram bot in the background
     controller.start()
-    print("SMTP Server started on port 1025...")
-    print("Telegram Bot listening for 'ping' messages...")
-
-    try:
-        application.run_polling()
-    except Exception as e:
-        controller.stop()
-        print("SMTP Server stopped.")
-        print("Telegram Bot stopped.")
+    await app.run_polling()
 
 
 if __name__ == "__main__":
