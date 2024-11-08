@@ -62,6 +62,9 @@ async def main():
     controller.start()
     await app.run_polling()
 
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    if not loop.is_running():
+        loop.run_until_complete(main())
+    else:
+        asyncio.ensure_future(main())
