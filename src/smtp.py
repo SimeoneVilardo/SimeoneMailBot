@@ -59,11 +59,13 @@ async def main():
     handler_smtp = MessageHandlerSMTP(app.bot)
     controller = Controller(handler_smtp, hostname="0.0.0.0", port=1025)
 
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
     controller.start()
-    await app.run_polling()
+    stop_event = asyncio.Event()
+    await stop_event.wait()
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    print(loop)
     asyncio.run(main())
