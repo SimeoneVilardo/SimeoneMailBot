@@ -15,7 +15,7 @@ SMTP_SERVER = os.environ.get("SMTP_SERVER")
 SMTP_PORT = int(os.environ.get("SMTP_PORT"))
 SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
-DOMAINS = os.environ.get("DOMAINS", []).split(",")
+DOMAINS = os.environ.get("DOMAINS", "").split(",")
 
 
 class MessageHandlerSMTP:
@@ -62,9 +62,8 @@ async def main():
     controller.start()
     await app.run_polling()
 
+
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    if not loop.is_running():
-        loop.run_until_complete(main())
-    else:
-        asyncio.ensure_future(main())
+    print(loop)
+    asyncio.run(main())
