@@ -46,7 +46,7 @@ jobs:
           port: ${{ secrets.HOST_PORT }}
           script: |
             docker compose -f /home/${{ secrets.HOST_USERNAME }}/simeone-mail-bot/docker-compose.yml down
-            docker compose -f /home/${{ secrets.HOST_USERNAME }}/simeone-mail-bot/docker-compose.yml up -d
+            docker compose -f /home/${{ secrets.HOST_USERNAME }}/simeone-mail-bot/docker-compose.yml up -d --pull always
       
       
     

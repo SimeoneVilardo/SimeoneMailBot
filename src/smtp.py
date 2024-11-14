@@ -45,6 +45,13 @@ class MessageHandlerSMTP:
         await self.bot.send_message(chat_id=CHAT_ID, text=basic_info, parse_mode=ParseMode.MARKDOWN)
         await self.bot.send_document(chat_id=CHAT_ID, document=email_content_io, filename="content.html")
 
+        for attachment in mail.iter_attachments():
+            file_data = attachment.get_content()
+            filename = attachment.get_filename() or "attachment"
+            attachment_io = BytesIO(file_data.encode("utf-8") if isinstance(file_data, str) else file_data)
+            attachment_io.seek(0)
+            await self.bot.send_document(chat_id=CHAT_ID, document=attachment_io, filename=filename)
+
         return "250 Message accepted for delivery"
 
 
